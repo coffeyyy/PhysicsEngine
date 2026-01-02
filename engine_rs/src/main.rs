@@ -2,6 +2,8 @@ use beryllium::*;
 
 mod vector;
 mod quadtree;
+mod barnes_hut;
+mod draw;
 
 const WINDOW_TITLE: &str = "engine_rs";
 

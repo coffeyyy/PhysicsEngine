@@ -80,6 +80,12 @@ impl Mul for Vector {
     }
 }
 
+pub struct Particle {
+    pub position: Vector,
+    pub velocity: Vector,
+    pub mass: f32,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
