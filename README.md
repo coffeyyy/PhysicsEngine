@@ -3,8 +3,12 @@
 Simple physics engine that I made using the Barnes-Hut approximation method. The simulation puts n=500 particles on the screen with uniform mass. These particles are attracted to a center point of mass fixed in the middle of the screen. The particles are able to bounce off one another, creating a randomized visualization of particle collisions.
 ## Barnes-Hut Simulation
 The naive approach to simulating forces on particles would be to have two nested loops in order to calculate the force between each article. This would take $O(n^2)$ operations (where $n$ is the number of particles). The Barnes-Hut approach involves approximating the center of mass for groupings of particles between one another. This reduces the number of operations to around $O(n * log n)$.
+<img width="1400" height="1034" alt="image" src="https://github.com/user-attachments/assets/0096fd16-9a73-478b-87f0-551a5f10388f" />
+
 
 There are several ways to tune the algorithm. The first is changing the number of particles. For this simulation, I settled for 500, but 1000 also seemed to run smoothly. Next, the value of $\theta$ is set to 0.7. $\theta$ determines the threshold for approximating a quadrant or making a new subtree. Every particle undergoes the check of (width of quadrant) / (distance to center of mass) < $\theta$. If this is true, then the quadtree is treated as single body with its own center of mass. Otherwise, keep recursing into smaller bodies. Thus, larger $\theta$ --> faster sim, smaller $\theta$ --> slower, but more accurate sim. 
+<img width="1710" height="984" alt="image" src="https://github.com/user-attachments/assets/5687e12e-1592-4141-8f81-523581cc778d" />
+
 
 One downside of the Barnes-Hut Simulation is that while it is fast, this is at the expense of reduced accuracy. The Fast Multipole Method (FMM) is used for situations where accuracy is crucial. Furthermore, scientists have found that Barnes-Hut can be have less than 99% accuracy in the worst case ("Skeletons from the Treecode Closet", J. Salmon and M. Warren, J. Comp. Phys. v 111, n 1, 1994).
 ## How The Engine Works
