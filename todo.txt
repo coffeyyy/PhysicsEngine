@@ -1,7 +1,0 @@
-1. make a vector class
-- needs to be as fast as traditional operations.
-    override operators
-- need +, -, * (scalar), and / (scalar)
-- need cross and dot products
-- need magnitude
-- need distance
