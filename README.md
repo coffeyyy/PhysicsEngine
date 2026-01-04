@@ -1,4 +1,6 @@
 # Simple Physics Engine
+<img width="2002" height="1660" alt="image" src="https://github.com/user-attachments/assets/a2f0958a-ba62-4b6b-b908-0002b18f2f20" />
+
 ## tldr
 Simple physics engine that I made using the Barnes-Hut approximation method. The simulation puts n=500 particles on the screen with uniform mass. These particles are attracted to a center point of mass fixed in the middle of the screen. The particles are able to bounce off one another, creating a randomized visualization of particle collisions.
 ## Barnes-Hut Simulation
