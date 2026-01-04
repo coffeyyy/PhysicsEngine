@@ -135,7 +135,7 @@ pub struct QuadTree {
     pub zones: [Option<Box<QuadTree>>; 4],
     pub elements: Vec<Point>,
     pub mass: f32,
-    pub cm: Point,
+    pub cm: Point
 }
 
 impl QuadTree {
@@ -145,13 +145,9 @@ impl QuadTree {
             threshold: 4,
             zones: [None, None, None, None],
             elements: Vec::new(),
-            mass: 0.0,
+            mass: 1.0,
             cm: Point::zero(),
         }
-    }
-
-    pub fn has_zones(&self) -> bool {
-        self.zones.iter().any(|z| z.is_some())
     }
 
     fn is_leaf(&self) -> bool {
@@ -217,65 +213,5 @@ impl QuadTree {
             Some(Box::new(QuadTree::new(sw))),
             Some(Box::new(QuadTree::new(se))),
         ];
-    }
-
-    pub fn find_in_range(&self, rect: &Rectangle) -> Vec<Point> {
-        let has_children = self.zones.iter().any(|z| z.is_some());
-
-        if has_children {
-            self.zones
-                .iter()
-                .filter_map(|z| z.as_deref())
-                .filter(|child| rect.intersects(&child.area))
-                .flat_map(|child| child.find_in_range(rect))
-                .collect()
-        } else {
-            self.elements
-                .iter()
-                .copied()
-                .filter(|p| rect.contains(p))
-                .collect()
-        }
-    }
-
-    pub fn find_nearest_neighbor(&self, p: Point) -> Option<Point> {
-        let mut best: Option<Point> = None;
-        let mut best_dist: f32 = f32::INFINITY;
-        self.find_nearest_rec(p, &mut best, &mut best_dist);
-        best
-    }
-
-    fn find_nearest_rec(&self, p: Point, best: &mut Option<Point>, best_dist: &mut f32) {
-        if self.is_leaf() {
-            for &element in &self.elements {
-                // TS had `p !== el`. In Rust we usually skip same coordinates (or better: skip by ID).
-                if element.x == p.x && element.y == p.y {
-                    continue;
-                }
-
-                let d = p.distance(&element);
-                if d < *best_dist {
-                    *best_dist = d;
-                    *best = Some(element);
-                }
-            }
-            return;
-        }
-
-        // Collect existing children, sort by rect distance to p (closest first)
-        let mut children: Vec<&QuadTree> = self.zones.iter().filter_map(|z| z.as_deref()).collect();
-        children.sort_by(|a, b| {
-            a.area
-                .distance_to_point(&p)
-                .partial_cmp(&b.area.distance_to_point(&p))
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
-
-        for child in children {
-            let rect_d = child.area.distance_to_point(&p);
-            if rect_d < *best_dist {
-                child.find_nearest_rec(p, best, best_dist);
-            }
-        }
     }
 }

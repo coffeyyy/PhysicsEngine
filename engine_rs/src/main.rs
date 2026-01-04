@@ -61,10 +61,10 @@ pub fn main() {
         p2: Point { x: 100.0, y: 75.0 },
     };
 
-    // Simple deterministic particles
-    let n: usize = 500;
+    let n: usize = 1000; // # of particles
     let mut particles: Vec<Particle> = Vec::with_capacity(n);
 
+    // generate random starting positions
     let mut seed: u32 = 123456789;
     let mut next_f32 = || {
         seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
@@ -75,7 +75,7 @@ pub fn main() {
         let x = bounds.p1.x + (bounds.p2.x - bounds.p1.x) * next_f32();
         let y = bounds.p1.y + (bounds.p2.y - bounds.p1.y) * next_f32();
         let center: Point = Point { x: 0.0, y: 0.0 };
-        let gm: f32 = 500.0; // same knob as your central gravity strength
+        let gm: f32 = 500.0; // Mass of the central point
         let eps2: f32 = 25.0; // softening (prevents insane speed near center)
 
         let dx = x - center.x;
@@ -102,8 +102,6 @@ pub fn main() {
     let g: f32 = 20.0;
     let eps2: f32 = 1e-3;
 
-    // If you use VSYNC, you usually do NOT need manual sleeping,
-    // but keeping a tiny cap is fine.
     let target_frame = Duration::from_secs_f32(1.0 / 60.0);
     let mut last_frame = Instant::now();
 
@@ -124,7 +122,6 @@ pub fn main() {
             }
         }
 
-        // IMPORTANT: use the actual logical window size (esp. with high DPI)
         let (w, h) = win.get_window_size();
 
         // Compute camera every frame (cheap) so resizing / DPI changes won't break mapping
@@ -138,21 +135,19 @@ pub fn main() {
             ppu,
         };
 
-        // ---- sim ----
         let root = build_tree(&particles, bounds);
         step_barnes_hut(&mut particles, &root, dt, theta, g, eps2);
 
-        // ---- draw ----
         win.set_draw_color(255, 255, 255, 255).unwrap();
         win.clear().unwrap();
 
-        // Draw particles as small filled squares (easier to see than 1px points)
+        // Draw particles as small filled squares (makes it easier to see)
         rects.clear();
         let r = 1; // radius -> 3x3
         for p in &particles {
             let [sx, sy] = world_to_screen(p.position.x, p.position.y, w, h, cam);
 
-            // Skip if off-screen (avoids huge negative rects)
+            // Skip if off-screen
             if sx < -10 || sx > w + 10 || sy < -10 || sy > h + 10 {
                 continue;
             }
@@ -166,7 +161,7 @@ pub fn main() {
 
         win.present();
 
-        // ---- frame cap (optional if using VSYNC) ----
+        // frame limit
         let elapsed = last_frame.elapsed();
         if elapsed < target_frame {
             std::thread::sleep(target_frame - elapsed);
