@@ -45,3 +45,6 @@ Algorithm to calculate the force for a given quadtree:
 3. Mesh in methods from the Fast Multipole Method (slower but more accurate sim approach)
 4. Add a UI to edit the sim in place without having to rebuild and run everytime a change is made
 5. Write some more unit tests
+
+### Inspiration
+Shoutout these lecture notes for guiding and inspiring me to make this project: https://people.eecs.berkeley.edu/~demmel/cs267/lecture26/lecture26.html
