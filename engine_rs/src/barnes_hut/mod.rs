@@ -23,7 +23,7 @@ fn force_point_to_mass(p: Point, cm: Point, mass: f32, g: f32, eps2: f32) -> Poi
     Point { x: g * mass * dx * inv_r3, y: g * mass * dy * inv_r3 }
 }
 
-fn compute_mass(node: &mut QuadTree) -> (f32, Point) {
+fn compute_mass(node: &QuadTree) -> (f32, Point) {
     let is_leaf: bool = node.zones.iter().all(|z| z.is_none());
 
     
@@ -47,7 +47,7 @@ fn compute_mass(node: &mut QuadTree) -> (f32, Point) {
     let mut child_mass: f32 = 0.0;
     let mut weighted_sum: Point = Point::zero();
 
-    for child in node.zones.iter_mut().filter_map(|z| z.as_deref_mut()) {
+    for child in node.zones.iter().filter_map(|z| z.as_deref()) {
         let (m, cm): (f32, Point) = compute_mass(child);
         child_mass += m;
 
@@ -62,7 +62,22 @@ fn compute_mass(node: &mut QuadTree) -> (f32, Point) {
     return (child_mass, cm);
 }
 
-fn tree_force(p: Point, node: &QuadTree, theta: f32, g: f32, eps2: f32) -> Point {
+pub fn accel_toward_point(pos: Point, center: Point, gm: f32, eps2: f32) -> crate::vector::Vector {
+    let dx = center.x - pos.x;
+    let dy = center.y - pos.y;
+
+    let r2 = dx * dx + dy * dy + eps2;
+    let r = r2.sqrt();
+    let inv_r3 = 1.0 / (r2 * r);
+
+    // acceleration = GM * r_vec / |r|^3
+    crate::vector::Vector {
+        x: gm * dx * inv_r3,
+        y: gm * dy * inv_r3,
+    }
+}
+
+pub fn tree_force(p: Point, node: &QuadTree, theta: f32, g: f32, eps2: f32) -> Point {
     let has_children: bool = node.zones.iter().any(|z| z.is_some());
 
     if !has_children {
@@ -75,10 +90,10 @@ fn tree_force(p: Point, node: &QuadTree, theta: f32, g: f32, eps2: f32) -> Point
 
             force = force.add(&inter_point_force(p, q, g, eps2));
         }
-        force
+        return force;
     }
 
-    let (mass, cm) = compute_mass(&mut node);
+    let (mass, cm) = compute_mass(node);
 
     if mass == 0.0 {
         return Point::zero();

@@ -1,3 +1,8 @@
+use crate::vector::Vector;
+
+const MAX_DEPTH: u32 = 32;
+const MIN_SIZE: f32 = 0.01;
+
 #[derive(Debug, Clone, Copy)]
 pub struct Point {
     pub x: f32,
@@ -60,12 +65,20 @@ impl Point {
         let dy: f32 = self.y - other.y;
         (dx.powi(2) + dy.powi(2)).sqrt()
     }
+
+    pub fn translate(&self, v: &Vector) -> Self {
+        Self { x: self.x + v.x, y: self.y + v.y }
+    }
+
+    pub fn add_vec(&self, v: &Vector) -> Point {
+        Point {x: self.x + v.x, y: self.y + v.y}
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct Rectangle {
-    p1: Point,
-    p2: Point,
+    pub p1: Point,
+    pub p2: Point,
 }
 
 impl Rectangle {
@@ -141,40 +154,69 @@ impl QuadTree {
         self.zones.iter().any(|z| z.is_some())
     }
 
-    pub fn insert(&mut self, element: &Point) {
-        if self.has_zones() {
-            for child in self.zones.iter_mut().flatten() {
-                if child.area.contains(&element) {
-                    child.insert(element);
-                    ()
-                }
-            }
-            ()
+    fn is_leaf(&self) -> bool {
+        self.zones.iter().all(|z| z.is_none())
+    }
+
+    pub fn insert(&mut self, p: Point) {
+        self.insert_depth(p, 0);
+    }
+
+    fn insert_depth(&mut self, p: Point, depth: u32) {
+        // If point isn't inside this node, ignore (or handle however you want)
+        if !self.area.contains(&p) {
+            return;
         }
-        self.elements.push(*element);
 
         let size = self.area.size();
-        if self.elements.len() >= self.threshold && size.x > 1.0 && size.y > 1.0 {
-            let half = size.div(2.0);
-            let base = Rectangle::new(self.area.p1, self.area.p1.add(&half));
+        if depth >= MAX_DEPTH || size.x <= MIN_SIZE || size.y <= MIN_SIZE {
+            self.elements.push(p);
+            return;
+        }
 
-            let nw = base;
-            let ne = base.move_rectangle(&Point::new(half.x, 0.0));
-            let sw = base.move_rectangle(&Point::new(0.0, half.y));
-            let se = base.move_rectangle(&half);
+        if self.is_leaf() && self.elements.len() < self.threshold {
+            self.elements.push(p);
+            return;
+        }
 
-            self.zones = [
-                Some(Box::new(QuadTree::new(nw))),
-                Some(Box::new(QuadTree::new(ne))),
-                Some(Box::new(QuadTree::new(sw))),
-                Some(Box::new(QuadTree::new(se))),
-            ];
-
+        if self.is_leaf() {
+            self.subdivide(); // creates 4 children
+            // reinsert existing points into children
             let old = std::mem::take(&mut self.elements);
-            for p in old {
-                self.insert(&p);
+            for q in old {
+                self.insert_depth(q, depth + 1);
             }
         }
+
+        // insert new point into a child
+        for child in self.zones.iter_mut().filter_map(|z| z.as_deref_mut()) {
+            if child.area.contains(&p) {
+                child.insert_depth(p, depth + 1);
+                return;
+            }
+        }
+
+        // fallback: if point lies exactly on a boundary, keep it here
+        self.elements.push(p);
+    }
+
+    fn subdivide(&mut self) {
+        let p1 = self.area.p1;
+        let p2 = self.area.p2;
+        let mid = Point { x: (p1.x + p2.x) * 0.5, y: (p1.y + p2.y) * 0.5 };
+
+        // NW, NE, SW, SE (pick your convention)
+        let nw = Rectangle { p1: Point { x: p1.x, y: mid.y }, p2: Point { x: mid.x, y: p2.y } };
+        let ne = Rectangle { p1: Point { x: mid.x, y: mid.y }, p2: Point { x: p2.x, y: p2.y } };
+        let sw = Rectangle { p1: Point { x: p1.x, y: p1.y }, p2: Point { x: mid.x, y: mid.y } };
+        let se = Rectangle { p1: Point { x: mid.x, y: p1.y }, p2: Point { x: p2.x, y: mid.y } };
+
+        self.zones = [
+            Some(Box::new(QuadTree::new(nw))),
+            Some(Box::new(QuadTree::new(ne))),
+            Some(Box::new(QuadTree::new(sw))),
+            Some(Box::new(QuadTree::new(se))),
+        ];
     }
 
     pub fn find_in_range(&self, rect: &Rectangle) -> Vec<Point> {
@@ -201,10 +243,6 @@ impl QuadTree {
         let mut best_dist: f32 = f32::INFINITY;
         self.find_nearest_rec(p, &mut best, &mut best_dist);
         best
-    }
-
-    fn is_leaf(&self) -> bool {
-        self.zones.iter().all(|z| z.is_none())
     }
 
     fn find_nearest_rec(&self, p: Point, best: &mut Option<Point>, best_dist: &mut f32) {
