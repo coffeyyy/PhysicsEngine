@@ -7,40 +7,18 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::time::Instant;
 use std::time::{Duration};
-
-use crate::draw::step_barnes_hut;
-use crate::quadtree::{Point, QuadTree, Rectangle};
+use crate::quadtree::{Point, build_tree, Rectangle};
 use crate::vector::Particle;
 
 mod barnes_hut;
-mod draw;
 mod quadtree;
 mod vector;
 
-#[derive(Copy, Clone)]
-struct Camera {
-    cx: f32,
-    cy: f32,
-    ppu: f32,
-}
-
-fn world_to_screen(x: f32, y: f32, w: i32, h: i32, camera: Camera) -> [i32; 2] {
-    let sx: i32 = (w as f32 * 0.5 + (x - camera.cx) * camera.ppu).round() as i32;
-    let sy: i32 = (h as f32 * 0.5 - (y - camera.cy) * camera.ppu).round() as i32; // flip Y
-    [sx, sy]
-}
-
-fn build_tree(particles: &[Particle], bounds: Rectangle) -> QuadTree {
-    let mut qt: QuadTree = QuadTree::new(bounds);
-    for p in particles {
-        qt.insert(p.position);
-    }
-    qt
-}
 
 pub fn main() {
     let sdl: Sdl = Sdl::init(InitFlags::EVERYTHING);
 
+    // set up the CSV file to log collisions per second
     let mut csv = OpenOptions::new()
         .create(true)
         .write(true)

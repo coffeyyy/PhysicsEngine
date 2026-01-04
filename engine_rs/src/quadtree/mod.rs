@@ -1,10 +1,13 @@
-use crate::vector::Vector;
+use crate::vector::{Vector, Particle};
 
 const MAX_DEPTH: u32 = 32;
 const MIN_SIZE: f32 = 0.01;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Point {
+    /*
+    Represents a point on a 2D plane
+     */
     pub x: f32,
     pub y: f32,
 }
@@ -77,6 +80,9 @@ impl Point {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Rectangle {
+    /*
+    Rectangle comprised of two points on the corners
+     */
     pub p1: Point,
     pub p2: Point,
 }
@@ -130,6 +136,9 @@ impl Rectangle {
 }
 
 pub struct QuadTree {
+    /*
+    A QuadTree is a tree that contains 4 children, it is used to represent quadrants in the simulation
+     */
     pub area: Rectangle,
     threshold: usize, // threshold will (should) always be 4, but setting default values isnt supported yet
     pub zones: [Option<Box<QuadTree>>; 4],
@@ -151,21 +160,26 @@ impl QuadTree {
     }
 
     fn is_leaf(&self) -> bool {
+        // checks if a quadtree is a leaf
         self.zones.iter().all(|z| z.is_none())
     }
 
     pub fn insert(&mut self, p: Point) {
+        /*
+        safe version that uses insert depth to prevent stack overflows
+         */
         self.insert_depth(p, 0);
     }
 
     fn insert_depth(&mut self, p: Point, depth: u32) {
-        // If point isn't inside this node, ignore (or handle however you want)
+        // If point isn't inside this node, ignore
         if !self.area.contains(&p) {
             return;
         }
 
         let size = self.area.size();
         if depth >= MAX_DEPTH || size.x <= MIN_SIZE || size.y <= MIN_SIZE {
+            // avoid stack overflow
             self.elements.push(p);
             return;
         }
@@ -197,15 +211,18 @@ impl QuadTree {
     }
 
     fn subdivide(&mut self) {
-        let p1 = self.area.p1;
-        let p2 = self.area.p2;
-        let mid = Point { x: (p1.x + p2.x) * 0.5, y: (p1.y + p2.y) * 0.5 };
+        /*
+        Divides the quadtree into its respective 4 quadtrants
+         */
+        let p1: Point = self.area.p1;
+        let p2: Point = self.area.p2;
+        let mid: Point = Point { x: (p1.x + p2.x) * 0.5, y: (p1.y + p2.y) * 0.5 };
 
-        // NW, NE, SW, SE (pick your convention)
-        let nw = Rectangle { p1: Point { x: p1.x, y: mid.y }, p2: Point { x: mid.x, y: p2.y } };
-        let ne = Rectangle { p1: Point { x: mid.x, y: mid.y }, p2: Point { x: p2.x, y: p2.y } };
-        let sw = Rectangle { p1: Point { x: p1.x, y: p1.y }, p2: Point { x: mid.x, y: mid.y } };
-        let se = Rectangle { p1: Point { x: mid.x, y: p1.y }, p2: Point { x: p2.x, y: mid.y } };
+        // NW, NE, SW, SE
+        let nw: Rectangle = Rectangle { p1: Point { x: p1.x, y: mid.y }, p2: Point { x: mid.x, y: p2.y } };
+        let ne: Rectangle = Rectangle { p1: Point { x: mid.x, y: mid.y }, p2: Point { x: p2.x, y: p2.y } };
+        let sw: Rectangle = Rectangle { p1: Point { x: p1.x, y: p1.y }, p2: Point { x: mid.x, y: mid.y } };
+        let se: Rectangle = Rectangle { p1: Point { x: mid.x, y: p1.y }, p2: Point { x: p2.x, y: mid.y } };
 
         self.zones = [
             Some(Box::new(QuadTree::new(nw))),
@@ -214,4 +231,15 @@ impl QuadTree {
             Some(Box::new(QuadTree::new(se))),
         ];
     }
+}
+
+pub fn build_tree(particles: &[Particle], bounds: Rectangle) -> QuadTree {
+    /*
+    insert the particles into the quadtree with the appropriate world bounds
+     */
+    let mut qt: QuadTree = QuadTree::new(bounds);
+    for p in particles {
+        qt.insert(p.position);
+    }
+    qt
 }
